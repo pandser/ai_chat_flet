@@ -1,7 +1,8 @@
-import asyncio                     # Библиотека для асинхронного программирования
-import flet as ft                  # Фреймворк для создания пользовательского интерфейса
+import asyncio                     
+import flet as ft                  
 
-from ui.styles import AppStyles    # Импорт стилей приложения (будет рассмотрен в следующей части урока)
+from ui.styles import AppStyles    # Импорт стилей приложения
+
 
 class MessageBubble(ft.Container):
     """
@@ -42,7 +43,7 @@ class MessageBubble(ft.Container):
             left=50 if is_user else 0,      # Отступ слева
             right=0 if is_user else 50,      # Отступ справа
             top=5,                           # Отступ сверху
-            bottom=5                         # Отступ снизу
+            bottom=5,                         # Отступ снизу
         )
 
         # Создание содержимого пузырька
@@ -54,7 +55,7 @@ class MessageBubble(ft.Container):
                     color=ft.Colors.WHITE,            # Белый цвет текста
                     size=16,                         # Размер шрифта
                     selectable=True,                 # Возможность выделения текста
-                    weight=ft.FontWeight.W_400       # Нормальная толщина шрифта
+                    weight=ft.FontWeight.W_400,      # Нормальная толщина шрифта
                 )
             ],
             tight=True  # Плотное расположение элементов в колонке
@@ -88,7 +89,7 @@ class ModelSelector(ft.Dropdown):
         self.options = [
             ft.dropdown.Option(
                 key=model['id'],             # ID модели как ключ
-                text=model['name']           # Название модели как отображаемый текст
+                text=model['name'],           # Название модели как отображаемый текст
             ) for model in models
         ]
 
@@ -102,7 +103,7 @@ class ModelSelector(ft.Dropdown):
         self.search_field = ft.TextField(
             on_change=self.filter_options,        # Функция обработки изменений
             hint_text="Поиск модели",            # Текст-подсказка в поле поиска
-            **AppStyles.MODEL_SEARCH_FIELD       # Применение стилей из конфигурации
+            **AppStyles.MODEL_SEARCH_FIELD,       # Применение стилей из конфигурации
         )
 
     def filter_options(self, e):

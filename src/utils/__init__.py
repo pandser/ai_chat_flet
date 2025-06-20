@@ -2,10 +2,10 @@
 Utils package initialization.
 Contains utility modules for the application.
 """
-from src.utils.analytics import Analytics
-from src.utils.cache import ChatCache
-from src.utils.logger import AppLogger
-from src.utils.monitor import PerformanceMonitor
+from utils.analytics import Analytics
+from utils.cache import ChatCache
+from utils.logger import AppLogger
+from utils.monitor import PerformanceMonitor
 
 
 __all__ = [

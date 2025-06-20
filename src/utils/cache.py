@@ -1,7 +1,9 @@
-import sqlite3      # Библиотека для работы с SQLite базой данных
 import json        # Библиотека для работы с JSON форматом
-from datetime import datetime  # Библиотека для работы с датой и временем
+import sqlite3      # Библиотека для работы с SQLite базой данных
 import threading   # Библиотека для обеспечения потокобезопасности
+
+from datetime import datetime  # Библиотека для работы с датой и временем
+
 
 class ChatCache:
     """
@@ -235,6 +237,6 @@ class ChatCache:
                 "user_message": row[2],    # Сообщение пользователя
                 "ai_response": row[3],     # Ответ AI
                 "timestamp": row[4],       # Временная метка
-                "tokens_used": row[5]      # Использовано токенов
+                "tokens_used": row[5],      # Использовано токенов
             })
         return history  # Возврат форматированной истории
