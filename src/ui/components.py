@@ -129,3 +129,37 @@ class ModelSelector(ft.Dropdown):
 
         # Обновление интерфейса для отображения отфильтрованного списка
         e.page.update()
+
+
+class Authenticate(ft.Container):
+    '''
+    Поля для ввода. Pin, если пользователь сохранен
+    или key, если первый вход или сброс ключа.
+    
+    Args:
+            is_user (bool): сохранен ли пользователь
+    '''
+    def __init__(self, is_user: bool):
+        super().__init__()
+        if is_user:
+            self.content=ft.Column(
+                controls=[
+                    ft.TextField(
+                        width=200,
+                        max_length=4,
+                        label='pin',
+                        password=True,
+                        can_reveal_password=True,
+                    ),
+                ]
+            )
+        else:
+            self.content=ft.Column(
+                controls=[
+                    ft.TextField(
+                        width=500,
+                        max_length=73,
+                        label='key sk-or-v1-...',
+                    ),
+                ]
+            )

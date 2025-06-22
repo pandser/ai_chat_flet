@@ -14,6 +14,9 @@ from utils.cache import ChatCache                  # Модуль для кэш�
 from utils.logger import AppLogger                 # Модуль для логирования работы приложения
 from utils.monitor import PerformanceMonitor       # Модуль для мониторинга производительности
 
+from ui.components import Authenticate
+from users import User
+
 
 class ChatApp:
     """
@@ -29,12 +32,15 @@ class ChatApp:
         - Система аналитики для сбора статистики
         - Система мониторинга для отслеживания производительности
         """
+        
         # Инициализация основных компонентов
-        self.api_client = OpenRouterClient()       # Создание клиента для работы с AI API
-        self.cache = ChatCache()                   # Инициализация системы кэширования
         self.logger = AppLogger()                  # Инициализация системы логирования
+        self.cache = ChatCache()         
+        self.api_client = OpenRouterClient()       # Создание клиента для работы с AI API
         self.analytics = Analytics(self.cache)     # Инициализация системы аналитики с передачей кэша
         self.monitor = PerformanceMonitor()        # Инициализация системы мониторинга
+        self.user = self.cache.get_user()
+        self.field = Authenticate(is_user=self.user)
 
         # Создание компонента для отображения баланса API
         self.balance_text = ft.Text(
@@ -201,6 +207,20 @@ class ChatApp:
                     snack.open = True
                     page.update()
 
+        def show_error_snack(page, message: str):
+            """Показ уведомления об ошибке"""
+            snack = ft.SnackBar(                  # Создание уведомления
+                content=ft.Text(
+                    message,
+                    color=ft.Colors.RED_500
+                ),
+                bgcolor=ft.Colors.GREY_900,
+                duration=5000,
+            )
+            page.overlay.append(snack)            # Добавление уведомления
+            snack.open = True                     # Открытие уведомления
+            page.update()                         # Обновление страницы
+
         async def show_analytics(e):
                 """Показ статистики использования"""
                 stats = self.analytics.get_statistics()    # Получение статистики
@@ -320,100 +340,174 @@ class ChatApp:
 
             if dialog in page.overlay:            # Удаление из overlay
                 page.overlay.remove(dialog)
+                
+        def start(e):
+            '''Основное окно чата.'''
+            page.clean()
+
+            # Создание компонентов интерфейса
+            self.message_input = ft.TextField(**AppStyles.MESSAGE_INPUT) # Поле ввода
+            self.chat_history = ft.ListView(**AppStyles.CHAT_HISTORY)    # История чата
+
+            # Загрузка существующей истории
+            self.load_chat_history()
+
+            # Создание кнопок управления
+            save_button = ft.ElevatedButton(
+                on_click=save_dialog,           # Привязка функции сохранения
+                **AppStyles.SAVE_BUTTON         # Применение стилей
+            )
+
+            clear_button = ft.ElevatedButton(
+                on_click=confirm_clear_history, # Привязка функции очистки
+                **AppStyles.CLEAR_BUTTON        # Применение стилей
+            )
+
+            send_button = ft.ElevatedButton(
+                on_click=send_message_click,    # Привязка функции отправки
+                **AppStyles.SEND_BUTTON         # Применение стилей
+            )
+
+            analytics_button = ft.ElevatedButton(
+                on_click=show_analytics,        # Привязка функции аналитики
+                **AppStyles.ANALYTICS_BUTTON    # Применение стилей
+            )
+
+            # Создание layout компонентов
+
+            # Создание ряда кнопок управления
+            control_buttons = ft.Row(  
+                controls=[                      # Размещение кнопок в ряд
+                    save_button,
+                    analytics_button,
+                    clear_button
+                ],
+                **AppStyles.CONTROL_BUTTONS_ROW # Применение стилей к ряду
+            )
+
+            # Создание строки ввода с кнопкой отправки
+            input_row = ft.Row(
+                controls=[                      # Размещение элементов ввода
+                    self.message_input,
+                    send_button
+                ],
+                **AppStyles.INPUT_ROW           # Применение стилей к строке ввода
+            )
+
+            # Создание колонки для элементов управления
+            controls_column = ft.Column(
+                controls=[                      # Размещение элементов управления
+                    input_row,
+                    control_buttons
+                ],
+                **AppStyles.CONTROLS_COLUMN     # Применение стилей к колонке
+            )
+
+            # Создание контейнера для баланса
+            balance_container = ft.Container(
+                content=self.balance_text,            # Размещение текста баланса
+                **AppStyles.BALANCE_CONTAINER        # Применение стилей к контейнеру
+            )
+
+            # Создание колонки выбора модели
+            model_selection = ft.Column(
+                controls=[                            # Размещение элементов выбора модели
+                    self.model_dropdown.search_field,
+                    self.model_dropdown,
+                    balance_container
+                ],
+                **AppStyles.MODEL_SELECTION_COLUMN   # Применение стилей к колонке
+            )
+
+                    # Создание основной колонки приложения
+            self.main_column = ft.Column(
+                controls=[                            # Размещение основных элементов
+                    model_selection,
+                    self.chat_history,
+                    controls_column
+                ],
+                **AppStyles.MAIN_COLUMN               # Применение стилей к главной колонке
+            )
+
+            # Добавление основной колонки на страницу
+            page.add(self.main_column)
+            page.update()
+            # Запуск монитора
+            self.monitor.get_metrics()
+
+            # Логирование запуска
+            self.logger.info("Приложение запущено")
+
+        def send_pin(e):
+            '''Проверка pin'''
+            val = self.field.content.controls[0].value
+            if val.isdigit():
+                if val==self.user['pin']:
+                    page.clean()
+                    start(e)
+                else:
+                    self.field.content.controls[0].error_text = 'pin incorrect'
+                    page.update()
+                
+            else:
+                self.field.content.controls[0].error_text = 'only digits'
+                page.update()
         
-    # Создание компонентов интерфейса
-        self.message_input = ft.TextField(**AppStyles.MESSAGE_INPUT) # Поле ввода
-        self.chat_history = ft.ListView(**AppStyles.CHAT_HISTORY)    # История чата
+        def new_pin(e):
+            '''Получение нового pin.'''
+            key = self.field.content.controls[0].value
+            if all((key.startswith('sk-or-v1-'), len(key)==73)):
+                self.api_client.api_key=key
+                if int(self.api_client.get_balance()[1:].split('.')[0]) >= 0:
+                    new_user = User(key)
+                    self.cache.save_user(new_user)
+                    t=ft.Text(f'remember your pin: {new_user.pin}')
+                    b=ft.ElevatedButton(text='ok', on_click=start)
+                    page.add(t, b)
 
-        # Загрузка существующей истории
-        self.load_chat_history()
+            else:
+                self.field.content.controls[0].error_text = 'not valid key'
+                page.update()
 
-        # Создание кнопок управления
-        save_button = ft.ElevatedButton(
-            on_click=save_dialog,           # Привязка функции сохранения
-            **AppStyles.SAVE_BUTTON         # Применение стилей
-        )
+        def reset_pin(e):
+            '''Удаление данных.'''
+            page.clean()
+            self.cache.del_user()
+            self.cache.clear_history()
+            self.user = self.cache.get_user()
+            self.field = Authenticate(is_user=self.user)
+            self.field.content.controls.append(
+                ft.ElevatedButton(
+                    text='new pin',
+                    on_click=new_pin,
+                )
+            )
+            page.add(self.field)
+            page.update()
+        
+        if self.user:
+            self.field.content.controls.append(
+                ft.ElevatedButton(
+                    text='reset pin',
+                    on_click=reset_pin,
+                )
+            )
+            self.field.content.controls.append(
+                ft.ElevatedButton(
+                    text='connect',
+                    on_click=send_pin,
+                ),
+            )
+        else:
+            self.field.content.controls.append(
+                ft.ElevatedButton(
+                    text='new pin',
+                    on_click=new_pin,
+                )
+            )
 
-        clear_button = ft.ElevatedButton(
-            on_click=confirm_clear_history, # Привязка функции очистки
-            **AppStyles.CLEAR_BUTTON        # Применение стилей
-        )
-
-        send_button = ft.ElevatedButton(
-            on_click=send_message_click,    # Привязка функции отправки
-            **AppStyles.SEND_BUTTON         # Применение стилей
-        )
-
-        analytics_button = ft.ElevatedButton(
-            on_click=show_analytics,        # Привязка функции аналитики
-            **AppStyles.ANALYTICS_BUTTON    # Применение стилей
-        )
-
-        # Создание layout компонентов
-
-        # Создание ряда кнопок управления
-        control_buttons = ft.Row(  
-            controls=[                      # Размещение кнопок в ряд
-                save_button,
-                analytics_button,
-                clear_button
-            ],
-            **AppStyles.CONTROL_BUTTONS_ROW # Применение стилей к ряду
-        )
-
-        # Создание строки ввода с кнопкой отправки
-        input_row = ft.Row(
-            controls=[                      # Размещение элементов ввода
-                self.message_input,
-                send_button
-            ],
-            **AppStyles.INPUT_ROW           # Применение стилей к строке ввода
-        )
-
-        # Создание колонки для элементов управления
-        controls_column = ft.Column(
-            controls=[                      # Размещение элементов управления
-                input_row,
-                control_buttons
-            ],
-            **AppStyles.CONTROLS_COLUMN     # Применение стилей к колонке
-        )
-
-        # Создание контейнера для баланса
-        balance_container = ft.Container(
-            content=self.balance_text,            # Размещение текста баланса
-            **AppStyles.BALANCE_CONTAINER        # Применение стилей к контейнеру
-        )
-
-        # Создание колонки выбора модели
-        model_selection = ft.Column(
-            controls=[                            # Размещение элементов выбора модели
-                self.model_dropdown.search_field,
-                self.model_dropdown,
-                balance_container
-            ],
-            **AppStyles.MODEL_SELECTION_COLUMN   # Применение стилей к колонке
-        )
-
-                # Создание основной колонки приложения
-        self.main_column = ft.Column(
-            controls=[                            # Размещение основных элементов
-                model_selection,
-                self.chat_history,
-                controls_column
-            ],
-            **AppStyles.MAIN_COLUMN               # Применение стилей к главной колонке
-        )
-
-        # Добавление основной колонки на страницу
-        page.add(self.main_column)
-
-        # Запуск монитора
-        self.monitor.get_metrics()
-
-        # Логирование запуска
-        self.logger.info("Приложение запущено")
-
+        page.add(self.field)
+        page.update()
 
 def main():
     """Точка входа в приложение"""

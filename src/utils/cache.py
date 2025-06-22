@@ -4,6 +4,8 @@ import threading   # Библиотека для обеспечения пото
 
 from datetime import datetime  # Библиотека для работы с датой и временем
 
+from users import User
+
 
 class ChatCache:
     """
@@ -91,8 +93,56 @@ class ChatCache:
             )
         ''')
 
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,  -- Уникальный ID пользователя
+                key TEXT,                           -- Ключ openrouter
+                pin TEXT                    -- PIN-код пользователя
+            )
+        ''')
+
         conn.commit()  # Сохранение изменений в базе
         conn.close()   # Закрытие соединения
+
+    def get_user(self) -> None | dict:
+        '''
+        Получение данных о пользователе.
+        '''
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        user = [ _ for _ in cursor.execute('''
+            SELECT key, pin FROM users
+        ''')]
+        conn.commit()
+        if not user:
+            return None
+        return { k: w for k, w in zip(('key', 'pin'), *user)}
+    
+    def save_user(self, user: User):
+        '''
+        Сохранение данных пользователя.
+
+        Args:
+            user (User): класс с данными пользователя key, pin
+        '''
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO users (key, pin)
+            VALUES(?, ?)
+        ''', (user.key, user.pin))
+        conn.commit()
+
+    def del_user(self):
+        '''
+        Удаление записи пользователя.
+        '''
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            DELETE FROM users
+        ''')
+        conn.commit()
 
     def save_message(self, model, user_message, ai_response, tokens_used):
         """
